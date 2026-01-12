@@ -5,6 +5,13 @@ if [ "$1" = "--stop" ]; then
     exit 0
 fi
 
+if [ $# -eq 0 ]; then
+    echo "Usage: ttyd-launch <command> [args...]"
+    echo "       ttyd-launch --stop"
+    echo "Launches a command in a tmux session and prints a ttyd URL to connect"
+    exit 1
+fi
+
 if ! command -v tmux &> /dev/null; then
     echo "Error: tmux is not installed or not in PATH"
     exit 1
@@ -13,13 +20,6 @@ fi
 if ! pgrep -x ttyd &> /dev/null; then
     echo "Starting ttyd in background..."
     ttyd --writable --url-arg tmux &> /dev/null &
-fi
-
-if [ $# -eq 0 ]; then
-    echo "Usage: ttyd-launch <command> [args...]"
-    echo "       ttyd-launch --stop"
-    echo "Launches a command in a tmux session and prints a ttyd URL to connect"
-    exit 1
 fi
 
 SESSION_NAME=$(uuidgen)
