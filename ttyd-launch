@@ -36,6 +36,7 @@ fi
 
 SESSION_NAME=$(uuidgen)
 URL=$(session_url "$SESSION_NAME")
+CMD=$(printf '%q ' "$@")
 
 # Create session: print URL then run command
-tmux new-session -s "$SESSION_NAME" "echo 'Connect to this session via ttyd:' && echo '$URL' && $@"
+tmux new-session -s "$SESSION_NAME" "echo 'Connect to this session via ttyd:' && echo '$URL' && $CMD"
