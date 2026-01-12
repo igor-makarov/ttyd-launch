@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ "$1" = "--stop" ]; then
+    pkill -x ttyd && echo "ttyd stopped" || echo "ttyd is not running"
+    exit 0
+fi
+
+if ! command -v tmux &> /dev/null; then
+    echo "Error: tmux is not installed or not in PATH"
+    exit 1
+fi
+
+if ! pgrep -x ttyd &> /dev/null; then
+    echo "Starting ttyd in background..."
+    ttyd --writable --url-arg tmux &> /dev/null &
+fi
+
+if [ $# -eq 0 ]; then
+    echo "Usage: ttyd-launch <command> [args...]"
+    echo "       ttyd-launch --stop"
+    echo "Launches a command in a tmux session and prints a ttyd URL to connect"
+    exit 1
+fi
+
+SESSION_NAME=$(uuidgen)
+URL="http://localhost:7681?arg=attach-session&arg=-t&arg=$SESSION_NAME"
+
+# Create session: print URL then run command
+tmux new-session -s "$SESSION_NAME" "echo 'Connect to this session via ttyd:' && echo '$URL' && $@"
