@@ -1,12 +1,24 @@
 #!/bin/bash
 
+session_url() {
+    echo "http://localhost:7681?arg=attach-session&arg=-t&arg=$1"
+}
+
 if [ "$1" = "--stop" ]; then
     pkill -x ttyd && echo "ttyd stopped" || echo "ttyd is not running"
     exit 0
 fi
 
+if [ "$1" = "--list" ]; then
+    tmux ls -F '#{session_name}' 2>/dev/null | while read -r session; do
+        echo "$session: $(session_url "$session")"
+    done
+    exit 0
+fi
+
 if [ $# -eq 0 ]; then
     echo "Usage: ttyd-launch <command> [args...]"
+    echo "       ttyd-launch --list"
     echo "       ttyd-launch --stop"
     echo "Launches a command in a tmux session and prints a ttyd URL to connect"
     exit 1
@@ -23,7 +35,7 @@ if ! pgrep -x ttyd &> /dev/null; then
 fi
 
 SESSION_NAME=$(uuidgen)
-URL="http://localhost:7681?arg=attach-session&arg=-t&arg=$SESSION_NAME"
+URL=$(session_url "$SESSION_NAME")
 
 # Create session: print URL then run command
 tmux new-session -s "$SESSION_NAME" "echo 'Connect to this session via ttyd:' && echo '$URL' && $@"
