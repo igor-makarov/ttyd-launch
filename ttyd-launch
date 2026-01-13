@@ -11,6 +11,14 @@ while [ $# -gt 0 ]; do
             export TTYD_LAUNCH_HOST="$2"
             shift 2
             ;;
+        --port)
+            if [ -z "$2" ]; then
+                echo "Error: --port requires a value"
+                exit 1
+            fi
+            export TTYD_LAUNCH_PORT="$2"
+            shift 2
+            ;;
         --stop)
             ACTION="stop"
             shift
@@ -27,6 +35,7 @@ done
 
 base_url() {
     local host_setting="${TTYD_LAUNCH_HOST:-localhost}"
+    local port="${TTYD_LAUNCH_PORT:-7681}"
     local protocol="https"
     local host="$host_setting"
 
@@ -37,7 +46,7 @@ base_url() {
         host="$(hostname).local"
     fi
 
-    echo "${protocol}://${host}:7681/"
+    echo "${protocol}://${host}:${port}/"
 }
 
 session_url() {
@@ -66,6 +75,8 @@ if [ $# -eq 0 ] && [ -z "$ACTION" ]; then
     echo "Options:"
     echo "  --host <host>  Set hostname for URLs (localhost, mdns, or hostname)"
     echo "                 Can also be set via TTYD_LAUNCH_HOST env var"
+    echo "  --port <port>  Set port (default: 7681)"
+    echo "                 Can also be set via TTYD_LAUNCH_PORT env var"
     exit 1
 fi
 
@@ -74,9 +85,12 @@ if ! command -v tmux &> /dev/null; then
     exit 1
 fi
 
-if ! pgrep -x ttyd &> /dev/null; then
-    echo "Starting ttyd in background..."
-    ttyd --writable --url-arg tmux &> /dev/null &
+PORT="${TTYD_LAUNCH_PORT:-7681}"
+
+# Start ttyd on our port if nothing's listening there
+if ! lsof -i ":$PORT" -sTCP:LISTEN &>/dev/null; then
+    echo "Starting ttyd on port $PORT..."
+    ttyd --writable --url-arg --port "$PORT" tmux &> /dev/null &
 fi
 
 SESSION_NAME=$(uuidgen)
