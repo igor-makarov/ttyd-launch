@@ -1,26 +1,71 @@
 #!/bin/bash
 
-session_url() {
-    echo "http://localhost:7681?arg=attach-session&arg=-t&arg=$1"
+ACTION=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --host)
+            if [ -z "$2" ]; then
+                echo "Error: --host requires a value (localhost, mdns, or hostname)"
+                exit 1
+            fi
+            export TTYD_LAUNCH_HOST="$2"
+            shift 2
+            ;;
+        --stop)
+            ACTION="stop"
+            shift
+            ;;
+        --list)
+            ACTION="list"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+base_url() {
+    local host_setting="${TTYD_LAUNCH_HOST:-localhost}"
+    local protocol="https"
+    local host="$host_setting"
+
+    if [ "$host_setting" = "localhost" ]; then
+        protocol="http"
+    elif [ "$host_setting" = "mdns" ]; then
+        protocol="http"
+        host="$(hostname).local"
+    fi
+
+    echo "${protocol}://${host}:7681/"
 }
 
-if [ "$1" = "--stop" ]; then
+session_url() {
+    echo "$(base_url)?arg=attach-session&arg=-t&arg=$1"
+}
+
+if [ "$ACTION" = "stop" ]; then
     pkill -x ttyd && echo "ttyd stopped" || echo "ttyd is not running"
     exit 0
 fi
 
-if [ "$1" = "--list" ]; then
+if [ "$ACTION" = "list" ]; then
     tmux ls -F '#{session_name}' 2>/dev/null | while read -r session; do
         echo "$session: $(session_url "$session")"
     done
     exit 0
 fi
 
-if [ $# -eq 0 ]; then
-    echo "Usage: ttyd-launch <command> [args...]"
-    echo "       ttyd-launch --list"
+if [ $# -eq 0 ] && [ -z "$ACTION" ]; then
+    echo "Usage: ttyd-launch [--host <host>] <command> [args...]"
+    echo "       ttyd-launch [--host <host>] --list"
     echo "       ttyd-launch --stop"
+    echo ""
     echo "Launches a command in a tmux session and prints a ttyd URL to connect"
+    echo ""
+    echo "Options:"
+    echo "  --host <host>  Set hostname for URLs (localhost, mdns, or hostname)"
+    echo "                 Can also be set via TTYD_LAUNCH_HOST env var"
     exit 1
 fi
 
